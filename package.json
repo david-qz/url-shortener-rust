@@ -1,0 +1,12 @@
+{
+  "name": "url-shortener-rust",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cargo lambda build --release --output-format zip",
+    "deploy": "npm run build && sls deploy"
+  },
+  "devDependencies": {
+    "serverless": "^3.38.0",
+    "serverless-better-credentials": "^2.0.0"
+  }
+}

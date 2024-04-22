@@ -1,0 +1,15 @@
+[package]
+name = "url-shortener-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aws-config = "1.2.0"
+aws-sdk-dynamodb = "1.22.0"
+axum = "0.7.5"
+axum-aws-lambda = "0.7.0"
+lambda_http = "0.11.1"
+nanoid = "0.4.0"
+serde = "1.0.198"
+tokio = { version = "1", features = ["macros", "full"] }
+tower = "0.4.13"

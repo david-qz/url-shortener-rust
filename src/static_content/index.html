@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Link shortener</title>
+        <style>
+            form {
+                width: 350px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            button {
+                align-self: flex-end;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Enter a link to shorten</h1>
+        <form>
+            <input type="text" name="link" required />
+            <button type="submit">Shorten</button>
+            <a id="shortened-link"><a>
+        </form>
+    </body>
+    <script>
+      const form = document.querySelector('form');
+      let link = null;
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (link === form.link.value) return;
+        link = form.link.value;
+
+        const params = new URLSearchParams({ link });
+        const url = `/shorten-link?${params.toString()}`;
+        const response = await fetch(url);
+        const data = await response.text();
+        const shortenedLink = new URL(window.origin + data);
+
+        const shortenedLinkElement = document.querySelector('#shortened-link');
+        shortenedLinkElement.href = shortenedLink.toString();
+        shortenedLinkElement.textContent = `${shortenedLink.host}${shortenedLink.pathname}`;
+      });
+    </script>
+</html>

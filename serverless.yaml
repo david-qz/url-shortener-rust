@@ -1,0 +1,96 @@
+service: url-shortener-rust
+frameworkVersion: "3"
+configValidationMode: error
+
+plugins:
+  - serverless-better-credentials
+
+params:
+  dev:
+    profile: main
+    domain: dqshort.link
+    hostedZoneId: Z07364563946RJZZ5B5VT
+    certificate: arn:aws:acm:us-east-1:381492255523:certificate/721cc530-3c1f-4b12-9deb-42e1fad21763
+
+provider:
+  name: aws
+  profile: ${param:profile}
+  region: us-east-1
+  deploymentMethod: direct
+  runtime: provided.al2023
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Resource: !GetAtt Table.Arn
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+  environment:
+    TABLE: !Ref Table
+
+resources:
+  Resources:
+    Table:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: shortened_urls_rust
+        AttributeDefinitions:
+          - AttributeName: key
+            AttributeType: S
+        KeySchema:
+          - AttributeName: key
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          PriceClass: PriceClass_100
+          Aliases:
+            - ${param:domain}
+          ViewerCertificate:
+            AcmCertificateArn: ${param:certificate}
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          Origins:
+            - DomainName: !Join [".", [!Ref HttpApi, "execute-api", "${self:provider.region}", "amazonaws.com"]]
+              Id: main-origin
+              CustomOriginConfig:
+                OriginProtocolPolicy: https-only
+          DefaultCacheBehavior:
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            Compress: false
+            TargetOriginId: main-origin
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # CachingDisabled managed policy
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # AllViewerExceptHostHeader managed policy
+            ViewerProtocolPolicy: redirect-to-https
+
+    DNSRecord:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        Name: ${param:domain}
+        HostedZoneId: ${param:hostedZoneId}
+        Type: A
+        AliasTarget:
+          DNSName: !GetAtt CloudFrontDistribution.DomainName
+          HostedZoneId: Z2FDTNDATAQYW2 # This is always the HostedZoneId for CloudFront distributions
+
+package:
+  individually: true
+
+functions:
+  main:
+    handler: bootstrap
+    package:
+      artifact: target/lambda/url-shortener-rust/bootstrap.zip
+    memorySize: 128
+    timeout: 5
+    events:
+      - httpApi: "*"
